@@ -15,10 +15,10 @@ const { developmentChains } = require("../../helper-hardhat-config");
         user = accounts[1];
         await deployments.fixture(["all"]);
 
-        const basicNftdeployment = await deployments.get("MonadStoryNFT");
-        basicNft = await ethers.getContractAt(
+        const monadNftdeployment = await deployments.get("MonadStoryNFT");
+        monadNft = await ethers.getContractAt(
           "MonadStoryNFT",
-          basicNftdeployment.address
+          monadNftdeployment.address
         );
         const NftMarketplacedeployment =
           await deployments.get("NFTMarketplace");
@@ -27,22 +27,29 @@ const { developmentChains } = require("../../helper-hardhat-config");
           NftMarketplacedeployment.address
         );
 
-        await basicNft.mintNft(); // owner is deployer
+        await monadNft.mintStory(
+          "bafybeigdyrztz6wq5k2z5z3r6p2k5x5kq3p5n5p4z7m3u5n4m6e", // storyHash
+          "bafybeih3v4zj2f4kz5m6y7x8w9q1a2s3d4f5g6h7j8k9l",      // metadataURI
+          {
+            value: ethers.parseEther("0.002"), // mintPrice
+          }
+        );
+         // owner is deployer
         //aprove the marketplace to change the ownership of the nft
-        await basicNft.approve(nftMarketplace.target, TOKEN_ID);
+        await monadNft.approve(nftMarketplace.target, TOKEN_ID);
       });
 
       describe("listItem", function () {
         it("emits an event after listing an item", async function () {
           await expect(
-            nftMarketplace.listItem(basicNft.target, TOKEN_ID, Number(PRICE))
+            nftMarketplace.listItem(monadNft.target, TOKEN_ID, Number(PRICE))
           ).to.emit(nftMarketplace, "ItemListed");
         });
         it("exclusively items that haven't been listed", async function () {
-          await nftMarketplace.listItem(basicNft.target, TOKEN_ID, PRICE);
-          const error = `AlreadyListed("${basicNft.target}", ${TOKEN_ID})`;
+          await nftMarketplace.listItem(monadNft.target, TOKEN_ID, PRICE);
+          const error = `AlreadyListed("${monadNft.target}", ${TOKEN_ID})`;
           await expect(
-            nftMarketplace.listItem(basicNft.target, TOKEN_ID, PRICE)
+            nftMarketplace.listItem(monadNft.target, TOKEN_ID, PRICE)
           ).to.be.revertedWithCustomError(
             nftMarketplace,
             "NFTMarketplace__AlreadyListed"
@@ -50,27 +57,27 @@ const { developmentChains } = require("../../helper-hardhat-config");
         });
         it("exclusively allows owners to list", async function () {
           const nftMarket = nftMarketplace.connect(user);
-          await basicNft.approve(nftMarket.target, TOKEN_ID);
+          await monadNft.approve(nftMarket.target, TOKEN_ID);
           await expect(
-            nftMarket.listItem(basicNft.target, TOKEN_ID, PRICE)
+            nftMarket.listItem(monadNft.target, TOKEN_ID, PRICE)
           ).to.be.revertedWithCustomError(
             nftMarketplace,
             "NFTMarketplace__NotOwner"
           );
         });
         it("needs approvals to list item", async function () {
-          await basicNft.approve(ethers.ZeroAddress, TOKEN_ID);
+          await monadNft.approve(ethers.ZeroAddress, TOKEN_ID);
           await expect(
-            nftMarketplace.listItem(basicNft.target, TOKEN_ID, PRICE)
+            nftMarketplace.listItem(monadNft.target, TOKEN_ID, PRICE)
           ).to.be.revertedWithCustomError(
             nftMarketplace,
             "NFTMarketplace__NotApprovedForMarketplace"
           );
         });
         it("Updates listing with seller and price", async function () {
-          await nftMarketplace.listItem(basicNft.target, TOKEN_ID, PRICE);
+          await nftMarketplace.listItem(monadNft.target, TOKEN_ID, PRICE);
           const listing = await nftMarketplace.getListing(
-            basicNft.target,
+            monadNft.target,
             TOKEN_ID
           );
           assert(listing.price.toString() == PRICE.toString());
@@ -79,7 +86,7 @@ const { developmentChains } = require("../../helper-hardhat-config");
         it("reverts if the price be 0", async () => {
           const ZERO_PRICE = ethers.parseEther("0");
           await expect(
-            nftMarketplace.listItem(basicNft.target, TOKEN_ID, ZERO_PRICE)
+            nftMarketplace.listItem(monadNft.target, TOKEN_ID, ZERO_PRICE)
           ).revertedWithCustomError(
             nftMarketplace,
             "NFTMarketplace__PriceMustBeAboveZero"
@@ -89,30 +96,30 @@ const { developmentChains } = require("../../helper-hardhat-config");
       describe("cancelListing", function () {
         it("reverts if there is no listing", async function () {
           await expect(
-            nftMarketplace.cancelListing(basicNft.target, TOKEN_ID)
+            nftMarketplace.cancelListing(monadNft.target, TOKEN_ID)
           ).to.be.revertedWithCustomError(
             nftMarketplace,
             "NFTMarketplace__NotListed"
           );
         });
         it("reverts if anyone but the owner tries to call", async function () {
-          await nftMarketplace.listItem(basicNft.target, TOKEN_ID, PRICE);
+          await nftMarketplace.listItem(monadNft.target, TOKEN_ID, PRICE);
           const nftMarket = nftMarketplace.connect(user);
-          await basicNft.approve(nftMarket.target, TOKEN_ID);
+          await monadNft.approve(nftMarket.target, TOKEN_ID);
           await expect(
-            nftMarket.cancelListing(basicNft.target, TOKEN_ID)
+            nftMarket.cancelListing(monadNft.target, TOKEN_ID)
           ).to.be.revertedWithCustomError(
             nftMarketplace,
             "NFTMarketplace__NotOwner"
           );
         });
         it("emits event and removes listing", async function () {
-          await nftMarketplace.listItem(basicNft.target, TOKEN_ID, PRICE);
+          await nftMarketplace.listItem(monadNft.target, TOKEN_ID, PRICE);
           await expect(
-            nftMarketplace.cancelListing(basicNft.target, TOKEN_ID)
+            nftMarketplace.cancelListing(monadNft.target, TOKEN_ID)
           ).to.emit(nftMarketplace, "ItemRemoved");
           const listing = await nftMarketplace.getListing(
-            basicNft.target,
+            monadNft.target,
             TOKEN_ID
           );
           assert(listing.price.toString() == "0");
@@ -121,30 +128,30 @@ const { developmentChains } = require("../../helper-hardhat-config");
       describe("buyItem", function () {
         it("reverts if the item isnt listed", async function () {
           await expect(
-            nftMarketplace.buyItem(basicNft.target, TOKEN_ID)
+            nftMarketplace.buyItem(monadNft.target, TOKEN_ID)
           ).to.be.revertedWithCustomError(
             nftMarketplace,
             "NFTMarketplace__NotListed"
           );
         });
         it("reverts if the price isnt met", async function () {
-          await nftMarketplace.listItem(basicNft.target, TOKEN_ID, PRICE);
+          await nftMarketplace.listItem(monadNft.target, TOKEN_ID, PRICE);
           await expect(
-            nftMarketplace.buyItem(basicNft.target, TOKEN_ID)
+            nftMarketplace.buyItem(monadNft.target, TOKEN_ID)
           ).to.be.revertedWithCustomError(
             nftMarketplace,
             "NFTMarketplace__PriceNotMet"
           );
         });
         it("transfers the nft to the buyer and updates internal proceeds record", async function () {
-          await nftMarketplace.listItem(basicNft.target, TOKEN_ID, PRICE);
+          await nftMarketplace.listItem(monadNft.target, TOKEN_ID, PRICE);
           const nftMarket = nftMarketplace.connect(user);
           await expect(
-            nftMarket.buyItem(basicNft.target, TOKEN_ID, {
+            nftMarket.buyItem(monadNft.target, TOKEN_ID, {
               value: PRICE,
             })
           ).to.emit(nftMarket, "ItemBought");
-          const newOwner = await basicNft.ownerOf(TOKEN_ID);
+          const newOwner = await monadNft.ownerOf(TOKEN_ID);
           const deployerProceeds = await nftMarket.getProceeds(
             deployer.address
           );
@@ -155,15 +162,15 @@ const { developmentChains } = require("../../helper-hardhat-config");
       describe("updateListing", function () {
         it("must be owner and listed", async function () {
           await expect(
-            nftMarketplace.updateListing(basicNft.target, TOKEN_ID, PRICE)
+            nftMarketplace.updateListing(monadNft.target, TOKEN_ID, PRICE)
           ).to.be.revertedWithCustomError(
             nftMarketplace,
             "NFTMarketplace__NotListed"
           );
-          await nftMarketplace.listItem(basicNft.target, TOKEN_ID, PRICE);
+          await nftMarketplace.listItem(monadNft.target, TOKEN_ID, PRICE);
           const nftMarket = nftMarketplace.connect(user);
           await expect(
-            nftMarket.updateListing(basicNft.target, TOKEN_ID, PRICE)
+            nftMarket.updateListing(monadNft.target, TOKEN_ID, PRICE)
           ).to.be.revertedWithCustomError(
             nftMarketplace,
             "NFTMarketplace__NotOwner"
@@ -171,10 +178,10 @@ const { developmentChains } = require("../../helper-hardhat-config");
         });
         it("reverts if new price is 0", async function () {
           const updatedPrice = ethers.parseEther("0");
-          await nftMarketplace.listItem(basicNft.target, TOKEN_ID, PRICE);
+          await nftMarketplace.listItem(monadNft.target, TOKEN_ID, PRICE);
           await expect(
             nftMarketplace.updateListing(
-              basicNft.target,
+              monadNft.target,
               TOKEN_ID,
               updatedPrice
             )
@@ -185,16 +192,16 @@ const { developmentChains } = require("../../helper-hardhat-config");
         });
         it("updates the price of the item", async function () {
           const updatedPrice = ethers.parseEther("0.002");
-          await nftMarketplace.listItem(basicNft.target, TOKEN_ID, PRICE);
+          await nftMarketplace.listItem(monadNft.target, TOKEN_ID, PRICE);
           expect(
             await nftMarketplace.updateListing(
-              basicNft.target,
+              monadNft.target,
               TOKEN_ID,
               updatedPrice
             )
           ).to.emit("ItemListed");
           const listing = await nftMarketplace.getListing(
-            basicNft.target,
+            monadNft.target,
             TOKEN_ID
           );
           assert(listing.price.toString() == updatedPrice.toString());
@@ -210,9 +217,9 @@ const { developmentChains } = require("../../helper-hardhat-config");
           );
         });
         it("withdraws proceeds", async function () {
-          await nftMarketplace.listItem(basicNft.target, TOKEN_ID, PRICE);
+          await nftMarketplace.listItem(monadNft.target, TOKEN_ID, PRICE);
           let nftMarket = nftMarketplace.connect(user);
-          await nftMarket.buyItem(basicNft.target, TOKEN_ID, {
+          await nftMarket.buyItem(monadNft.target, TOKEN_ID, {
             value: PRICE,
           });
           nftMarket = nftMarketplace.connect(deployer);
