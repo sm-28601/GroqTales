@@ -182,14 +182,26 @@ export function StoryCard({
     >
       <Card
         className={cn(
-          'overflow-hidden transition-all duration-200 hover:shadow-md group',
+          'overflow-hidden transition-all duration-200 hover:shadow-md group focus-within:ring-2 focus-within:ring-primary',
           isGrid ? 'h-full' : 'flex gap-4'
         )}
       >
         {hideLink ? (
           <div className="block">{cardContent}</div>
         ) : (
-          <div className="block cursor-pointer" onClick={handleViewNFT}>
+          <div
+            className="block cursor-pointer outline-none"
+            onClick={handleViewNFT}
+            role="button"
+            tabIndex={0}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                handleViewNFT();
+              }
+            }}
+            aria-label={`View story: ${story.title}`}
+          >
             {cardContent}
           </div>
         )}
