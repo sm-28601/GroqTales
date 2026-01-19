@@ -5,11 +5,21 @@
 
 const express = require('express');
 const router = express.Router();
-const { authenticate, optionalAuth, isComicCreator, canEditComic, canViewComic } = require('../middleware/auth');
+const {
+  authenticate,
+  optionalAuth,
+  isComicCreator,
+  canEditComic,
+  canViewComic,
+} = require('../middleware/auth');
 const multer = require('multer');
 const Comic = require('../models/Comic');
 const ComicPage = require('../models/ComicPage');
-const { validateComicInput, validatePageInput, sanitizeSlug } = require('../utils/validation');
+const {
+  validateComicInput,
+  validatePageInput,
+  sanitizeSlug,
+} = require('../utils/validation');
 const {
   processAndUploadPageImage,
   uploadBufferToIPFS,
@@ -32,7 +42,11 @@ const upload = multer({
     if (allowedTypes.includes(file.mimetype)) {
       cb(null, true);
     } else {
-      cb(new Error('Invalid file type. Only JPEG, PNG, WebP, and GIF are allowed.'));
+      cb(
+        new Error(
+          'Invalid file type. Only JPEG, PNG, WebP, and GIF are allowed.'
+        )
+      );
     }
   },
 });
@@ -128,7 +142,8 @@ router.get('/search/text', async (req, res) => {
       visibility: 'public',
     };
 
-    if (genres) query.genres = { $in: Array.isArray(genres) ? genres : [genres] };
+    if (genres)
+      query.genres = { $in: Array.isArray(genres) ? genres : [genres] };
     if (tags) query.tags = { $in: Array.isArray(tags) ? tags : [tags] };
     if (creator) query.creator = creator;
 
@@ -378,60 +393,69 @@ router.delete('/:id', authenticate, async (req, res) => {
  * POST /api/v1/comics/:id/cover
  * Upload cover image for comic
  */
-router.post('/:id/cover', authenticate, upload.single('cover'), async (req, res) => {
-  try {
-    const { id } = req.params;
+router.post(
+  '/:id/cover',
+  authenticate,
+  upload.single('cover'),
+  async (req, res) => {
+    try {
+      const { id } = req.params;
 
-    if (!req.file) {
-      return res.status(400).json({
+      if (!req.file) {
+        return res.status(400).json({
+          success: false,
+          error: 'No file uploaded',
+        });
+      }
+
+      const comic = await Comic.findById(id);
+      if (!comic) {
+        return res.status(404).json({
+          success: false,
+          error: 'Comic not found',
+        });
+      }
+      if (comic.creator.toString() !== req.user.id) {
+        return res.status(403).json({
+          success: false,
+          error: 'Access denied',
+        });
+      }
+
+      // Upload cover to IPFS
+      const cid = await uploadBufferToIPFS(
+        req.file.buffer,
+        req.file.originalname,
+        {
+          name: `${comic.slug}_cover`,
+          keyvalues: {
+            comicId: id,
+            type: 'cover',
+          },
+        }
+      );
+
+      comic.coverImage = {
+        cid,
+        gatewayURL: getGatewayURL(cid),
+      };
+
+      await comic.save();
+
+      res.json({
+        success: true,
+        data: comic.coverImage,
+      });
+    } catch (error) {
+      console.error('Error uploading cover:', error);
+      res.status(500).json({
         success: false,
-        error: 'No file uploaded',
+        error: 'Failed to upload cover',
+        message: error.message,
       });
     }
-
-    const comic = await Comic.findById(id);
-    if (!comic) {
-      return res.status(404).json({
-        success: false,
-        error: 'Comic not found',
-      });
-    }
-    if (comic.creator.toString() !== req.user.id) {
-      return res.status(403).json({
-        success: false,
-        error: 'Access denied',
-      });
-    }
-
-    // Upload cover to IPFS
-    const cid = await uploadBufferToIPFS(req.file.buffer, req.file.originalname, {
-      name: `${comic.slug}_cover`,
-      keyvalues: {
-        comicId: id,
-        type: 'cover',
-      },
-    });
-
-    comic.coverImage = {
-      cid,
-      gatewayURL: getGatewayURL(cid),
-    };
-
-    await comic.save();
-
-    res.json({
-      success: true,
-      data: comic.coverImage,
-    });
-  } catch (error) {
-    console.error('Error uploading cover:', error);
-    res.status(500).json({
-      success: false,
-      error: 'Failed to upload cover',
-      message: error.message,
-    });
   }
-});
+);
 
 // ============================================================================
 // COMIC PAGE OPERATIONS
@@ -479,106 +503,112 @@ router.get('/:comicId/pages', async (req, res) => {
  * POST /api/v1/comics/:comicId/pages
  * Add a new page to a comic
  */
-router.post('/:comicId/pages', authenticate, upload.single('image'), async (req, res) => {
-  try {
-    const { comicId } = req.params;
-    const { pageNumber, altText, transcript, captions, panelDescriptors } = req.body;
+router.post(
+  '/:comicId/pages',
+  authenticate,
+  upload.single('image'),
+  async (req, res) => {
+    try {
+      const { comicId } = req.params;
+      const { pageNumber, altText, transcript, captions, panelDescriptors } =
+        req.body;
 
-    if (!req.file) {
-      return res.status(400).json({
-        success: false,
-        error: 'No image uploaded',
-      });
-    }
-
-    // Validate page input
-    const validation = validatePageInput({ ...req.body, comicId });
-    if (!validation.valid) {
-      return res.status(400).json({
-        success: false,
-        error: 'Validation failed',
-        details: validation.errors,
-      });
-    }
-
-    // Check if comic exists
-    const comic = await Comic.findById(comicId);
-    if (!comic) {
-      return res.status(404).json({
-        success: false,
-        error: 'Comic not found',
-      });
-    }
-
-    // Process and upload image with variants
-    const imageAsset = await processAndUploadPageImage(
-      req.file.buffer,
-      req.file.originalname,
-      req.file.mimetype,
-      { comicId, pageNumber }
-    );
-
-    // Atomic pageNumber assignment
-    let assignedPageNumber = pageNumber;
-    if (!assignedPageNumber) {
-      const updatedComic = await Comic.findOneAndUpdate(
-        { _id: comicId },
-        { $inc: { nextPageNumber: 1 } },
-        { new: true }
-      );
-      assignedPageNumber = updatedComic.nextPageNumber - 1;
-    }
-
-    // Safe JSON parsing helper
-    function safeJsonParse(str, fallback = []) {
-      if (!str) return fallback;
-      try {
-        return JSON.parse(str);
-      } catch {
-        return null;
+      if (!req.file) {
+        return res.status(400).json({
+          success: false,
+          error: 'No image uploaded',
+        });
       }
-    }
-    const parsedCaptions = safeJsonParse(captions, []);
-    const parsedPanelDescriptors = safeJsonParse(panelDescriptors, []);
-    if (captions && parsedCaptions === null) {
-      return res.status(400).json({
+
+      // Validate page input
+      const validation = validatePageInput({ ...req.body, comicId });
+      if (!validation.valid) {
+        return res.status(400).json({
+          success: false,
+          error: 'Validation failed',
+          details: validation.errors,
+        });
+      }
+
+      // Check if comic exists
+      const comic = await Comic.findById(comicId);
+      if (!comic) {
+        return res.status(404).json({
+          success: false,
+          error: 'Comic not found',
+        });
+      }
+
+      // Process and upload image with variants
+      const imageAsset = await processAndUploadPageImage(
+        req.file.buffer,
+        req.file.originalname,
+        req.file.mimetype,
+        { comicId, pageNumber }
+      );
+
+      // Atomic pageNumber assignment
+      let assignedPageNumber = pageNumber;
+      if (!assignedPageNumber) {
+        const updatedComic = await Comic.findOneAndUpdate(
+          { _id: comicId },
+          { $inc: { nextPageNumber: 1 } },
+          { new: true }
+        );
+        assignedPageNumber = updatedComic.nextPageNumber - 1;
+      }
+
+      // Safe JSON parsing helper
+      function safeJsonParse(str, fallback = []) {
+        if (!str) return fallback;
+        try {
+          return JSON.parse(str);
+        } catch {
+          return null;
+        }
+      }
+      const parsedCaptions = safeJsonParse(captions, []);
+      const parsedPanelDescriptors = safeJsonParse(panelDescriptors, []);
+      if (captions && parsedCaptions === null) {
+        return res.status(400).json({
+          success: false,
+          error: 'Invalid JSON in captions field',
+        });
+      }
+      if (panelDescriptors && parsedPanelDescriptors === null) {
+        return res.status(400).json({
+          success: false,
+          error: 'Invalid JSON in panelDescriptors field',
+        });
+      }
+
+      // Create page
+      const page = await ComicPage.create({
+        comicId,
+        pageNumber: assignedPageNumber,
+        imageAsset,
+        altText,
+        transcript: transcript || '',
+        captions: parsedCaptions,
+        panelDescriptors: parsedPanelDescriptors,
+        isPinned: true,
+        pinnedAt: new Date(),
+      });
+
+      res.status(201).json({
+        success: true,
+        data: page,
+      });
+    } catch (error) {
+      console.error('Error adding page:', error);
+      res.status(500).json({
         success: false,
-        error: 'Invalid JSON in captions field',
+        error: 'Failed to add page',
+        message: error.message,
       });
     }
-    if (panelDescriptors && parsedPanelDescriptors === null) {
-      return res.status(400).json({
-        success: false,
-        error: 'Invalid JSON in panelDescriptors field',
-      });
-    }
-
-    // Create page
-    const page = await ComicPage.create({
-      comicId,
-      pageNumber: assignedPageNumber,
-      imageAsset,
-      altText,
-      transcript: transcript || '',
-      captions: parsedCaptions,
-      panelDescriptors: parsedPanelDescriptors,
-      isPinned: true,
-      pinnedAt: new Date(),
-    });
-
-    res.status(201).json({
-      success: true,
-      data: page,
-    });
-  } catch (error) {
-    console.error('Error adding page:', error);
-    res.status(500).json({
-      success: false,
-      error: 'Failed to add page',
-      message: error.message,
-    });
   }
-});
+);
 
 /**
  * PATCH /api/v1/comics/:comicId/pages/:pageId
@@ -742,7 +772,6 @@ router.post('/:id/unpublish', authenticate, async (req, res) => {
   }
 });
 
-
 // ============================================================================
 // SEARCH (must be before /:slug to avoid capture)
 // ============================================================================
@@ -768,7 +797,8 @@ router.get('/search/text', async (req, res) => {
       visibility: 'public',
     };
 
-    if (genres) query.genres = { $in: Array.isArray(genres) ? genres : [genres] };
+    if (genres)
+      query.genres = { $in: Array.isArray(genres) ? genres : [genres] };
     if (tags) query.tags = { $in: Array.isArray(tags) ? tags : [tags] };
     if (creator) query.creator = creator;
 

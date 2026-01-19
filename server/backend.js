@@ -109,7 +109,7 @@ app.use((err, req, res, next) => {
 // Graceful shutdown with database connection cleanup (Issue #166)
 const gracefulShutdown = async (signal) => {
   console.log(`${signal} received, shutting down gracefully`);
-  
+
   const shutdownTimeout = setTimeout(() => {
     console.error('Shutdown timed out, forcing exit');
     process.exit(1);
@@ -148,6 +148,9 @@ connectDB(DB_MAX_RETRIES, DB_RETRY_DELAY_MS)
     });
   })
   .catch((err) => {
-    console.error('Failed to start server due to database connection error:', err.message);
+    console.error(
+      'Failed to start server due to database connection error:',
+      err.message
+    );
     process.exit(1);
   });

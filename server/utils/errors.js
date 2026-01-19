@@ -146,9 +146,9 @@ const errorHandler = (err, req, res, next) => {
 
   // App errors (operational errors)
   if (err.isOperational) {
-    return res.status(err.statusCode).json(
-      formatErrorResponse(err, isDevelopment)
-    );
+    return res
+      .status(err.statusCode)
+      .json(formatErrorResponse(err, isDevelopment));
   }
 
   // Programming or unknown errors

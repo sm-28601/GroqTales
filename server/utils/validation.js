@@ -53,11 +53,17 @@ const validateComicInput = (data) => {
     }
   }
 
-  if (data.visibility && !['private', 'unlisted', 'public'].includes(data.visibility)) {
+  if (
+    data.visibility &&
+    !['private', 'unlisted', 'public'].includes(data.visibility)
+  ) {
     errors.push('Visibility must be one of: private, unlisted, public');
   }
 
-  if (data.readingDirection && !['ltr', 'rtl', 'ttb'].includes(data.readingDirection)) {
+  if (
+    data.readingDirection &&
+    !['ltr', 'rtl', 'ttb'].includes(data.readingDirection)
+  ) {
     errors.push('Reading direction must be one of: ltr, rtl, ttb');
   }
 

@@ -8,7 +8,9 @@ const PINATA_JSON_ENDPOINT = `${PINATA_BASE_URL}/pinning/pinJSONToIPFS`;
 const PINATA_API_KEY = process.env.PINATA_API_KEY;
 const PINATA_API_SECRET = process.env.PINATA_API_SECRET;
 if (!PINATA_API_KEY || !PINATA_API_SECRET) {
-  throw new Error('Pinata API credentials (PINATA_API_KEY and PINATA_API_SECRET) must be set in the environment');
+  throw new Error(
+    'Pinata API credentials (PINATA_API_KEY and PINATA_API_SECRET) must be set in the environment'
+  );
 }
 // Ensure both are set for all environments
 
@@ -75,7 +77,10 @@ const generateImageVariants = async (buffer, mimeType) => {
     return variants;
   } catch (error) {
     // If sharp is not installed or fails, return original for all variants
-    console.warn('Sharp not available, using original image for all variants:', error.message);
+    console.warn(
+      'Sharp not available, using original image for all variants:',
+      error.message
+    );
     return {
       original: buffer,
       thumb: buffer,
@@ -157,7 +162,9 @@ const uploadBufferToIPFS = async (buffer, filename, metadata = {}) => {
   } catch (error) {
     console.error('Error uploading to IPFS:', error.message);
     if (error.response) {
-      throw new Error(`Pinata API error: ${error.response.status} - ${JSON.stringify(error.response.data)}`);
+      throw new Error(
+        `Pinata API error: ${error.response.status} - ${JSON.stringify(error.response.data)}`
+      );
     }
     throw new Error(`Failed to upload to IPFS: ${error.message}`);
   }
@@ -205,7 +212,9 @@ const uploadJSONToIPFS = async (jsonData, metadata = {}) => {
   } catch (error) {
     console.error('Error uploading JSON to IPFS:', error.message);
     if (error.response) {
-      throw new Error(`Pinata API error: ${error.response.status} - ${JSON.stringify(error.response.data)}`);
+      throw new Error(
+        `Pinata API error: ${error.response.status} - ${JSON.stringify(error.response.data)}`
+      );
     }
     throw new Error(`Failed to upload JSON to IPFS: ${error.message}`);
   }
@@ -225,15 +234,15 @@ const getGatewayURL = (cid, gatewayIndex = 0) => {
 /**
  * Get all gateway URLs for a CID (for fallback)
  * @param {string} cid - IPFS CID
- * @returns {Object} - Gateway URLs
+ * @returns {{ original: string[], thumb: string[], web: string[], hd: string[] } | null} - Gateway URLs for each asset type, each as an array of fallback URLs
  */
 const getAllGatewayURLs = (cid) => {
   if (!cid) return null;
   return {
-    original: getGatewayURL(cid, 0),
-    thumb: getGatewayURL(cid, 0),
-    web: getGatewayURL(cid, 0),
-    hd: getGatewayURL(cid, 0),
+    original: IPFS_GATEWAYS.map((_, i) => getGatewayURL(cid, i)),
+    thumb: IPFS_GATEWAYS.map((_, i) => getGatewayURL(cid, i)),
+    web: IPFS_GATEWAYS.map((_, i) => getGatewayURL(cid, i)),
+    hd: IPFS_GATEWAYS.map((_, i) => getGatewayURL(cid, i)),
   };
 };
 
@@ -245,7 +254,12 @@ const getAllGatewayURLs = (cid) => {
  * @param {Object} metadata - Additional metadata (comicId, pageNumber, etc.)
  * @returns {Promise<Object>} - Image asset object with CIDs and gateway URLs
  */
-const processAndUploadPageImage = async (buffer, filename, mimeType, metadata = {}) => {
+const processAndUploadPageImage = async (
+  buffer,
+  filename,
+  mimeType,
+  metadata = {}
+) => {
   // Validate image
   const validation = validateImage(buffer, mimeType);
   if (!validation.valid) {
@@ -260,54 +274,38 @@ const processAndUploadPageImage = async (buffer, filename, mimeType, metadata = 
 
   // Upload all variants to IPFS
   const uploadPromises = {
-    original: uploadBufferToIPFS(
-      variants.original,
-      filename,
-      {
-        name: `${metadata.comicId}_page_${metadata.pageNumber}_original`,
-        keyvalues: {
-          comicId: metadata.comicId || '',
-          pageNumber: metadata.pageNumber || '',
-          variant: 'original',
-        },
-      }
-    ),
-    thumb: uploadBufferToIPFS(
-      variants.thumb,
-      `thumb_${filename}`,
-      {
-        name: `${metadata.comicId}_page_${metadata.pageNumber}_thumb`,
-        keyvalues: {
-          comicId: metadata.comicId || '',
-          pageNumber: metadata.pageNumber || '',
-          variant: 'thumb',
-        },
-      }
-    ),
-    web: uploadBufferToIPFS(
-      variants.web,
-      `web_${filename}`,
-      {
-        name: `${metadata.comicId}_page_${metadata.pageNumber}_web`,
-        keyvalues: {
-          comicId: metadata.comicId || '',
-          pageNumber: metadata.pageNumber || '',
-          variant: 'web',
-        },
-      }
-    ),
-    hd: uploadBufferToIPFS(
-      variants.hd,
-      `hd_${filename}`,
-      {
-        name: `${metadata.comicId}_page_${metadata.pageNumber}_hd`,
-        keyvalues: {
-          comicId: metadata.comicId || '',
-          pageNumber: metadata.pageNumber || '',
-          variant: 'hd',
-        },
-      }
-    ),
+    original: uploadBufferToIPFS(variants.original, filename, {
+      name: `${metadata.comicId}_page_${metadata.pageNumber}_original`,
+      keyvalues: {
+        comicId: metadata.comicId || '',
+        pageNumber: metadata.pageNumber || '',
+        variant: 'original',
+      },
+    }),
+    thumb: uploadBufferToIPFS(variants.thumb, `thumb_${filename}`, {
+      name: `${metadata.comicId}_page_${metadata.pageNumber}_thumb`,
+      keyvalues: {
+        comicId: metadata.comicId || '',
+        pageNumber: metadata.pageNumber || '',
+        variant: 'thumb',
+      },
+    }),
+    web: uploadBufferToIPFS(variants.web, `web_${filename}`, {
+      name: `${metadata.comicId}_page_${metadata.pageNumber}_web`,
+      keyvalues: {
+        comicId: metadata.comicId || '',
+        pageNumber: metadata.pageNumber || '',
+        variant: 'web',
+      },
+    }),
+    hd: uploadBufferToIPFS(variants.hd, `hd_${filename}`, {
+      name: `${metadata.comicId}_page_${metadata.pageNumber}_hd`,
+      keyvalues: {
+        comicId: metadata.comicId || '',
+        pageNumber: metadata.pageNumber || '',
+        variant: 'hd',
+      },
+    }),
   };
 
   const cids = await Promise.all([

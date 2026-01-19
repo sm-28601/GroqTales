@@ -135,8 +135,6 @@ const ComicPageSchema = new mongoose.Schema(
   }
 );
 
-
-
 // Compound unique index: one pageNumber per comic
 ComicPageSchema.index({ comicId: 1, pageNumber: 1 }, { unique: true });
 

@@ -75,7 +75,8 @@ const ComicSchema = new mongoose.Schema(
         validator: function (v) {
           return /^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(v);
         },
-        message: 'Slug can only contain lowercase letters, numbers, and hyphens',
+        message:
+          'Slug can only contain lowercase letters, numbers, and hyphens',
       },
     },
     description: {
@@ -232,6 +233,6 @@ ComicSchema.virtual('pages', {
   foreignField: 'comicId',
 });
 
-// Slug is now generated via the setter, so no pre-save hook is needed.
+// Slug is generated in the pre-validate hook (see ComicSchema.pre('validate')), so no pre-save hook is needed.
 
 module.exports = mongoose.model('Comic', ComicSchema);

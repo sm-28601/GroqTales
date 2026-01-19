@@ -1,14 +1,14 @@
-const { network } = require("hardhat");
-const { developmentChains } = require("../helper-hardhat-config.js");
-const { verify } = require("../utils/verify.js");
+const { network } = require('hardhat');
+const { developmentChains } = require('../helper-hardhat-config.js');
+const { verify } = require('../utils/verify.js');
 
 module.exports = async function ({ getNamedAccounts, deployments }) {
   const { deploy, log } = deployments;
   const { deployer } = await getNamedAccounts();
 
-  log("__________________________________________________________");
+  log('__________________________________________________________');
   const args = [];
-  const NftMarketplace = await deploy("NFTMarketplace", {
+  const NftMarketplace = await deploy('NFTMarketplace', {
     from: deployer,
     args: args,
     log: true,
@@ -19,10 +19,10 @@ module.exports = async function ({ getNamedAccounts, deployments }) {
     !developmentChains.includes(network.name) &&
     process.env.MONADSCAN_API_KEY
   ) {
-    log("Verifying ....");
+    log('Verifying ....');
     await verify(NftMarketplace.address, args);
   }
-  log("__________________________________________________________");
+  log('__________________________________________________________');
 };
 
-module.exports.tags = ["all", "nftmarket"];
+module.exports.tags = ['all', 'nftmarket'];

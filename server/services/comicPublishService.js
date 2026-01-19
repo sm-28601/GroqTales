@@ -46,7 +46,9 @@ const runPreflightChecks = async (comicId) => {
     }
 
     // Check alt text coverage
-    const pagesWithoutAltText = pages.filter((page) => !page.altText || page.altText.trim() === '');
+    const pagesWithoutAltText = pages.filter(
+      (page) => !page.altText || page.altText.trim() === ''
+    );
     if (pagesWithoutAltText.length > 0) {
       errors.push(
         `${pagesWithoutAltText.length} page(s) missing alt text (required for accessibility)`
@@ -195,7 +197,8 @@ const mintComicNFT = async (comicId, metadataCID, options = {}) => {
     // Import ethers if available
     try {
       const { ethers } = require('ethers');
-      const targetContract = contractAddress || process.env.COMIC_NFT_CONTRACT_ADDRESS;
+      const targetContract =
+        contractAddress || process.env.COMIC_NFT_CONTRACT_ADDRESS;
 
       // Get provider based on network
       const rpcUrl = process.env[`${network.toUpperCase()}_RPC_URL`];
@@ -204,7 +207,10 @@ const mintComicNFT = async (comicId, metadataCID, options = {}) => {
       }
 
       const provider = new ethers.JsonRpcProvider(rpcUrl);
-      const wallet = new ethers.Wallet(process.env.MINTING_PRIVATE_KEY, provider);
+      const wallet = new ethers.Wallet(
+        process.env.MINTING_PRIVATE_KEY,
+        provider
+      );
 
       // Contract ABI for minting
       const abi = [
@@ -222,6 +228,8 @@ const mintComicNFT = async (comicId, metadataCID, options = {}) => {
       let tokenId;
       try {
         // Try to get tokenId from event logs (ERC721 Transfer event)
+        const zero = ethers.ZeroAddress.toLowerCase();
+        const to = ownerAddress.toLowerCase();
         const transferEvent = receipt.logs
           .map((log) => {
             try {
@@ -230,7 +238,12 @@ const mintComicNFT = async (comicId, metadataCID, options = {}) => {
               return null;
             }
           })
-          .find((parsed) => parsed && parsed.name === 'Transfer');
+          .find(
+            (parsed) =>
+              parsed?.name === 'Transfer' &&
+              parsed.args?.from?.toLowerCase() === zero &&
+              parsed.args?.to?.toLowerCase() === to
+          );
         if (transferEvent && transferEvent.args && transferEvent.args.tokenId) {
           tokenId = transferEvent.args.tokenId.toString();
         } else {
@@ -282,7 +295,7 @@ const indexComicForSearch = async (comicId) => {
 
     // MongoDB text indexes are already configured in the model
     // This ensures the document is immediately searchable
-    
+
     // Optional: Integrate external search service
     if (process.env.ELASTICSEARCH_URL) {
       try {
@@ -306,7 +319,10 @@ const indexComicForSearch = async (comicId) => {
 
         console.log('Comic indexed in Elasticsearch:', comic.title);
       } catch (esError) {
-        console.warn('Elasticsearch indexing failed (non-critical):', esError.message);
+        console.warn(
+          'Elasticsearch indexing failed (non-critical):',
+          esError.message
+        );
         // Don't fail the entire operation if external search fails
       }
     }
@@ -332,7 +348,10 @@ const indexComicForSearch = async (comicId) => {
 
         console.log('Comic indexed in Algolia:', comic.title);
       } catch (algoliaError) {
-        console.warn('Algolia indexing failed (non-critical):', algoliaError.message);
+        console.warn(
+          'Algolia indexing failed (non-critical):',
+          algoliaError.message
+        );
       }
     }
 
@@ -364,7 +383,11 @@ const publishComic = async (comicId, options = {}) => {
     // Step 1: Preflight checks
     console.log('Running preflight checks...');
     const preflight = await runPreflightChecks(comicId);
-    result.steps.push({ step: 'preflight', success: preflight.canPublish, ...preflight });
+    result.steps.push({
+      step: 'preflight',
+      success: preflight.canPublish,
+      ...preflight,
+    });
 
     if (!preflight.canPublish) {
       result.errors = preflight.errors;
@@ -399,7 +422,11 @@ const publishComic = async (comicId, options = {}) => {
     if (options.mintNFT) {
       console.log('Minting NFT...');
       result.status = PublishStatus.MINTING;
-      const mintResult = await mintComicNFT(comicId, metadataResult.metadataCID, options);
+      const mintResult = await mintComicNFT(
+        comicId,
+        metadataResult.metadataCID,
+        options
+      );
       result.steps.push({ step: 'minting', ...mintResult });
 
       if (!mintResult.success) {

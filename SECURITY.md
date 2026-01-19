@@ -6,8 +6,8 @@ GroqTales follows a rolling support window for the latest minor line plus the tw
 releases. Older minors are considered End of Security Support (EoSS) once two newer minor versions
 ship or critical architectural changes occur.
 
-| Version | Status                | Support Level                 | Notes                        |
-| ------- | --------------------  | ----------------------------- | ---------------------------- |
+| Version | Status               | Support Level                 | Notes                        |
+| ------- | -------------------- | ----------------------------- | ---------------------------- |
 | 1.2.5   | ✅ Active (Latest)   | Full (features + security)    | Current production release   |
 | 1.2.4   | ✅ Active (Previous) | Security & critical bug fixes | Upgrade recommended          |
 | 1.2.3   | ✅ Maintained        | Security (critical only)      | Upgrade to 1.2.5             |
@@ -58,7 +58,7 @@ paths are out of scope unless they lead to data exposure or privilege escalation
 ### Severity Classification (OWASP Inspired)
 
 | Severity      | Example Impact                                       | Target Fix Window |
-| ------------- | ---------------------------------------------------- | ----------------  |
+| ------------- | ---------------------------------------------------- | ----------------- |
 | Critical      | Remote code execution, private key compromise        | 24–72h            |
 | High          | Auth bypass, privilege escalation, data exfiltration | 3–5 days          |
 | Medium        | Stored XSS, SSRF with limited scope                  | < 14 days         |
