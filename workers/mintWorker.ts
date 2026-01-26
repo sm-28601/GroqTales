@@ -83,4 +83,15 @@ async function handleMintSaga(event: any) {
   }
 }
 
-setInterval(processOutbox, 2000);
+async function runWorker() {
+  while (true) {
+    try {
+      await processOutbox();
+    } catch (err) {
+      console.error('Worker loop error:', err);
+    }
+    await new Promise((r) => setTimeout(r, 2000));
+  }
+}
+
+runWorker();
