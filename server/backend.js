@@ -161,9 +161,21 @@ connectDB(DB_MAX_RETRIES, DB_RETRY_DELAY_MS)
       logger.info(`Health check: http://localhost:${PORT}/api/health`);
     });
   })
-  .catch((err) => {
+  .catch(() => {
     logger.error('Failed to start server due to database connection error', {
-      error: err.message,
+      requestId: 'startup',
+      component: 'database',
     });
-    process.exit(1);
-  });
+  
+    
+    if (process.env.NODE_ENV === 'development') {
+      logger.warn('Starting server in development mode without database...');
+      server = app.listen(PORT, () => {
+        logger.info(`GroqTales Backend API server running on port ${PORT} (NO DATABASE)`);
+        logger.info(`Environment: ${process.env.NODE_ENV || 'development'}`);
+        logger.info(`Health check: http://localhost:${PORT}/api/health`);
+      });
+    } else {
+      process.exit(1);
+    }
+  });    
