@@ -179,7 +179,22 @@ export function Header() {
                       {item.label}
                       <ChevronDown className="ml-1 h-3 w-3" />
                     </DropdownMenuTrigger>
-                    <DropdownMenuContent>
+                    <DropdownMenuContent
+                      side="bottom"
+                      align="start"
+                      sideOffset={8}
+                      collisionPadding={16}
+                      className="
+                        z-50
+                        w-[160px] sm:w-[180px]
+                        bg-white
+                        dark:bg-slate-900
+                        border-4 border-foreground
+                        shadow-[6px_6px_0px_0px_var(--shadow-color)]
+                        rounded-md
+                        p-2
+                      "
+                    >
                       {item.items?.map((subItem) => (
                         <DropdownMenuItem key={subItem.href} asChild>
                           <Link
