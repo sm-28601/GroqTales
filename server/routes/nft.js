@@ -581,13 +581,28 @@ router.patch('/remove/:tokenId', authRequired, async (req, res) => {
  *         schema:
  *           type: string
  *         description: The token ID of the NFT to buy
+ *     requestBody:
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               sellerWallet:
+ *                 type: string
+ *                 description: Ethereum wallet address of the seller (for royalty tracking)
+ *                 example: "0x1234567890abcdef1234567890abcdef12345678"
+ *               buyerWallet:
+ *                 type: string
+ *                 description: Ethereum wallet address of the buyer (for royalty tracking)
+ *                 example: "0xabcdef1234567890abcdef1234567890abcdef12"
+ *               txHash:
+ *                 type: string
+ *                 description: Transaction hash 
  *     responses:
  *       200:
  *         description: NFT bought successfully
  *       400:
- *         description: Invalid input
- *       403:
- *         description: User is not the owner
+ *         description: Invalid input or buyer already owns the NFT
  *       404:
  *         description: NFT not found
  *       500:
@@ -721,7 +736,7 @@ router.patch('/buy/:tokenId', authRequired, async (req, res) => {
  *   patch:
  *     tags:
  *       - NFT
- *     summary: Update price of alisted nft
+ *     summary: Update price of a listed nft
  *     description: Updates the price of a listed nft
  *     security:
  *       - BearerAuth: []
@@ -748,7 +763,7 @@ router.patch('/buy/:tokenId', authRequired, async (req, res) => {
  *       200:
  *         description: NFT price updated successfully
  *       400:
- *         description: Invalid input of price is missing
+ *         description: Invalid input or price is missing
  *       403:
  *         description: User is not the owner
  *       404:
@@ -792,7 +807,7 @@ router.patch('/update-price/:tokenId', authRequired, async (req, res) => {
     });
   } catch (error) {
     // console.log('Error updating NFT price from listing:', error);
-    logger.error('Error updating priceo of NFT', {
+    logger.error('Error updating price of NFT', {
       requestId: req.id,
       component: 'nft',
       tokenId: req.params.tokenId,
